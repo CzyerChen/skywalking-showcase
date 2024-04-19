@@ -18,123 +18,58 @@
 
 {{- if .Values.features.activemqMonitor.enabled }}
 
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: activemq-exporter-config
-  labels:
-    app: activemq
-data:
-  config: |
-    startDelaySeconds: 10
-    hostPort: amq:1616
-    ssl: false
-    lowercaseOutputName: false
-    lowercaseOutputLabelNames: false
-    includeObjectNames: ["org.apache.activemq:*","java.lang:type=OperatingSystem","java.lang:type=GarbageCollector,*","java.lang:type=Threading","java.lang:type=Runtime","java.lang:type=Memory","java.lang:name=*"]
-    excludeObjectNames: ["org.apache.activemq:type=ColumnFamily,*"]
-    autoExcludeObjectNameAttributes: true
-    excludeObjectNameAttributes:
-      "java.lang:type=OperatingSystem":
-        - "ObjectName"
-      "java.lang:type=Runtime":
-        - "ClassPath"
-        - "SystemProperties"
-    rules:
-    - pattern: ".*"  
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: activemq
-spec:
-  ports:
-    - protocol: TCP
-      port: 61616
-      targetPort: 61616
-  selector:
-    app: activemq
-
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: activemq-exporter
+  namespace: {{ .Values.sampleServices.namespace }}
 spec:
+  selector:
+    app: activemq-exporter
   ports:
     - protocol: TCP
       port: 5556
       targetPort: 5556
-  selector:
-    app: activemq
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: activemq
+  name: activemq-exporter-deployment
+  namespace: {{ .Values.sampleServices.namespace }}
+  labels:
+    app: activemq-exporter
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: activemq
+      app: activemq-exporter
   template:
     metadata:
       labels:
-        app: activemq
+        app: activemq-exporter
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
       containers:
-        - name: activemq
-          image: apache/activemq-classic:6.0.1
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 61616
-              name: openwire
-            - containerPort: 1616
-              name: metrics 
-          env:
-            - name: ACTIVEMQ_SUNJMX_START
-              value: "-Dcom.sun.management.jmxremote.port=1616 -Dcom.sun.management.jmxremote.rmi.port=1616 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
-            - name: ACTIVEMQ_BROKER_NAME
-              value: "activemq-broker"
-            - name: ACTIVEMQ_OPTS
-              value: "-Xmx128m -Xms128m"  
         - name: activemq-exporter
           image: bitnami/jmx-exporter:0.20.0
           imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 5556
-              name: metrics
+          resources:
+            limits:
+              cpu: 100m
+              memory: "256Mi"
+            requests:
+              cpu: 100m
+              memory: "128Mi"
           volumeMounts:
-            - name: activemq-exporter-config
+            - name: activemq-config
               mountPath: /opt/bitnami/jmx-exporter/example_configs/httpserver_sample_config.yml
               subPath: config
       volumes:
-        - name: activemq-exporter-config
+        - name: activemq-config
           configMap:
-            name: activemq-exporter-config
+            name: activemq-config
 
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: activemq-mock-client
-spec:
-  schedule: "*/10 * * * *"
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          restartPolicy: Never
-          containers:
-            - name: mock-client
-              image: apache/activemq-classic:6.0.1
-              imagePullPolicy: IfNotPresent
-              command: ["sh","-c","/opt/apache-activemq/bin/activemq producer --brokerUrl tcp://activemq:61616 --destination queue://testQueue --messageCount 50 --persistent true --message hello;/opt/apache-activemq/bin/activemq consumer --brokerUrl tcp://activemq:61616 --destination queue://testQueue --messageCount 10 --parallelThreads 2"]
-
-{{- end }}
+  { { - end } }

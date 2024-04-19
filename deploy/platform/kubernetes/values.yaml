@@ -234,6 +234,15 @@ prometheus-elasticsearch-exporter:
   es:
     uri: "http://elasticsearch-master:9200"
 
+activemq:
+  enabled: false
+  replicaCount: 1
+  auth:
+    enabled: false
+  persistence:
+    enabled: false
+  metrics:
+    enabled: true
 
 opentelemetry:
   enabled: false

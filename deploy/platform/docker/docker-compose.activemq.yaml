@@ -16,25 +16,6 @@
 version: "2.1"
 
 services:
-  amq:
-    image: apache/activemq-classic:6.0.1
-    hostname: amq
-    ports:
-      - "61616:61616"
-      - "8161:8161"
-    expose:
-      - 1616
-    environment:
-      ACTIVEMQ_SUNJMX_START: "-Dcom.sun.management.jmxremote.port=1616 -Dcom.sun.management.jmxremote.rmi.port=1616 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
-      ACTIVEMQ_BROKER_NAME: activemq-broker
-    healthcheck:
-      test: [ "CMD-SHELL", "curl --silent --fail localhost:8161 || exit 1" ]
-      interval: 15s
-      timeout: 10s
-      retries: 120
-    networks:
-      - e2e
-
   amqexporter:
     image: bitnami/jmx-exporter:0.20.0
     hostname: amqexporter
@@ -46,37 +27,13 @@ services:
       activemq:
         condition: service_healthy
     networks:
-      - e2e
-
-  amq-consumer-mock:
-    image: apache/activemq-classic:6.0.1
-    hostname: amq-consumer-mock
-    entryPoint: bash
-    command:
-      - -c
-      - "/opt/apache-activemq/bin/activemq consumer --brokerUrl tcp://amq:61616 --destination queue://testQueue --messageCount 10 --parallelThreads 2 && /opt/apache-activemq/bin/activemq consumer --brokerUrl tcp://amq:61616 --destination topic://testTopic --messageCount 10 --parallelThreads 2"
-    depends_on:
-      amq:
-        condition: service_healthy
-    networks:
-      - e2e
-
-  amq-producer-mock:
-    image: apache/activemq-classic:6.0.1
-    hostname: amq-producer-mock
-    entryPoint: bash    
-    command:
-      - -c
-      - "/opt/apache-activemq/bin/activemq producer --brokerUrl tcp://amq:61616 --destination queue://testQueue --messageCount 50 --persistent true --message hello && /opt/apache-activemq/bin/activemq producer --brokerUrl tcp://aamq:61616 --destination topic://testTopic --messageCount 50 --persistent true --message world"
-    depends_on:
-      - amq-consumer-mock
-    networks:
-      - e2e
+      - sw
 
   otel-collector:
     image: otel/opentelemetry-collector:${OTEL_COLLECTOR_VERSION}
-    networks:
-      - e2e
+    environment:
+      SW_AGENT_COLLECTOR_BACKEND_SERVICES: ${BACKEND_SERVICE}:11800
+      OTEL_TARGET_ADDREESS: amqexporter:5556
     command: [ "--config=/etc/otel-collector-config.yaml" ]
     volumes:
       - ./config/activemq/otel-collector-config.yaml:/etc/otel-collector-config.yaml
@@ -85,7 +42,9 @@ services:
     depends_on:
       oap:
         condition: service_healthy
+    networks:
+      - sw
 
 networks:
-  e2e:
+  sw:
   
