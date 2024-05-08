@@ -540,9 +540,6 @@ spec:
               value: "activemq-broker"
             - name: ACTIVEMQ_OPTS
               value: "-Xmx128m -Xms128m"
-          ports:
-            - containerPort: 1616
-              name: metrics
           resources:
             limits:
               cpu: 100m
