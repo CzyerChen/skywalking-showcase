@@ -554,6 +554,7 @@ spec:
             - name: activemq-config
               mountPath: /opt/activemq/conf/activemq.xml
               subPath: activemq
+        {{- if .Values.features.activemqMonitor.enabled }}
         - name: activemq-exporter
           image: bitnami/jmx-exporter:0.20.0
           imagePullPolicy: IfNotPresent
@@ -571,6 +572,7 @@ spec:
             - name: activemq-config
               mountPath: /opt/bitnami/jmx-exporter/example_configs/httpserver_sample_config.yml
               subPath: config
+        {{- end }}
       volumes:
         - name: activemq-config
           configMap:
