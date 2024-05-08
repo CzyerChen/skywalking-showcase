@@ -15,7 +15,7 @@
 
 ---
 startDelaySeconds: 10
-hostPort: amq:1616
+hostPort: activemq:1616
 username: admin
 password: activemq
 ssl: false

@@ -29,7 +29,7 @@
       regex: activemq-exporter;metrics
     - source_labels: [ ]
       target_label: cluster
-      replacement: activemq.{{ .Release.Namespace }}
+      replacement: activemq.{{ .Values.sampleServices.namespace }}
     - source_labels: [ __meta_kubernetes_pod_name ]
       target_label: service_instance_id
       regex: (.+)
